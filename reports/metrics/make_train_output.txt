@@ -1,0 +1,41 @@
+PYTHONPATH=. python -m src.data_processing
+INFO:__main__:Schema validation passed for all input files.
+INFO:__main__:Loading transaction data from /Users/subreshthakulla/Downloads/ieee-fraud-detection/train_transaction.csv
+INFO:__main__:Transaction rows: 590540, columns: 394
+INFO:__main__:Loading identity data from /Users/subreshthakulla/Downloads/ieee-fraud-detection/train_identity.csv
+INFO:__main__:Identity rows: 144233, columns: 41
+INFO:__main__:Merged data: 590540 rows, 434 columns
+INFO:__main__:Split data - Train: 472432, Test: 118108
+INFO:__main__:Ingestion summary saved to /Users/subreshthakulla/MLOps_pipeline/reports/metrics/ingestion_summary.json
+INFO:src.preprocessing:Preprocessor fitted. Features: 118, Medians learned: 118
+INFO:__main__:Train shape: (472432, 119), Test shape: (118108, 119)
+INFO:__main__:Fraud rate - Train: 0.0350, Test: 0.0350
+INFO:src.preprocessing:Preprocessing artifacts saved to /Users/subreshthakulla/MLOps_pipeline/models/preprocessing_artifacts.joblib
+INFO:src.preprocessing:Label encoders saved to /Users/subreshthakulla/MLOps_pipeline/models/label_encoders.joblib
+INFO:__main__:Processed data saved to /Users/subreshthakulla/MLOps_pipeline/data/processed
+PYTHONPATH=. python -m src.train
+INFO:__main__:Training XGBoost with params: {'n_estimators': 300, 'max_depth': 7, 'learning_rate': 0.05, 'subsample': 0.8, 'colsample_bytree': 0.8, 'min_child_weight': 5, 'scale_pos_weight': 20, 'random_state': 42, 'eval_metric': 'auc', 'n_jobs': -1}
+[0]	validation_0-auc:0.85379
+[50]	validation_0-auc:0.90017
+[100]	validation_0-auc:0.91696
+[150]	validation_0-auc:0.92807
+[200]	validation_0-auc:0.93500
+[250]	validation_0-auc:0.93933
+[299]	validation_0-auc:0.94325
+INFO:__main__:Metrics: AUC=0.9432, F1=0.4581
+2026/05/31 11:42:31 WARNING mlflow.models.model: `artifact_path` is deprecated. Please use `name` instead.
+INFO:__main__:MLflow run ID: 19a4df450d6b49e69f3593e822ecc755
+INFO:__main__:Model saved to /Users/subreshthakulla/MLOps_pipeline/models/model.joblib
+INFO:__main__:Feature columns saved to /Users/subreshthakulla/MLOps_pipeline/models/feature_columns.joblib
+INFO:__main__:Metrics saved to /Users/subreshthakulla/MLOps_pipeline/models/metrics.json
+
+Training complete! Metrics:
+  auc_roc: 0.9432
+  average_precision: 0.6610
+  f1: 0.4581
+  precision: 0.3227
+  recall: 0.7897
+  test_size: 118108
+  train_size: 472432
+  fraud_rate_train: 0.0350
+  fraud_rate_test: 0.0350

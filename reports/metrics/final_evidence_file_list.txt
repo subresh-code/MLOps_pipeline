@@ -1,0 +1,43 @@
+===== MODELS =====
+models/metrics.json
+models/preprocessing_artifacts.joblib
+models/feature_columns.joblib
+models/feature_importance.csv
+models/.gitkeep
+models/model.joblib
+models/label_encoders.joblib
+
+===== PROCESSED DATA =====
+data/processed/train.parquet
+data/processed/test.parquet
+data/processed/reference_data.parquet
+
+===== REPORT FIGURES =====
+reports/figures/confusion_matrix.png
+reports/figures/feature_importance.png
+reports/figures/roc_curve.png
+reports/figures/pr_curve.png
+
+===== REPORT METRICS =====
+reports/metrics/make_train_output.txt
+reports/metrics/evaluation_metrics.json
+reports/metrics/ingestion_summary.json
+reports/metrics/final_evidence_file_list.txt
+reports/metrics/classification_report.txt
+
+===== MONITORING =====
+reports/monitoring/drift_summary.json
+reports/monitoring/drift_report.html
+
+===== NOTEBOOK FIGURES =====
+notebooks/figures/08_missing_values.png
+notebooks/figures/05_product_code_analysis.png
+notebooks/figures/11_v_features.png
+notebooks/figures/10_target_correlations.png
+notebooks/figures/09_correlation_matrix.png
+notebooks/figures/03_fraud_rate_by_amount.png
+notebooks/figures/01_fraud_distribution.png
+notebooks/figures/02_transaction_amount.png
+notebooks/figures/06_card_analysis.png
+notebooks/figures/07_email_domain_analysis.png
+notebooks/figures/04_temporal_patterns.png

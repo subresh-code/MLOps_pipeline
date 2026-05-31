@@ -1,0 +1,16 @@
+{
+  "transaction_rows": 590540,
+  "transaction_columns": 394,
+  "identity_rows": 144233,
+  "identity_columns": 41,
+  "identity_file_used": true,
+  "merged_rows": 590540,
+  "merged_columns": 434,
+  "join_key": "TransactionID",
+  "join_type": "left",
+  "row_count_preserved": true,
+  "train_rows": 472432,
+  "test_rows": 118108,
+  "fraud_rate_train": 0.035,
+  "fraud_rate_test": 0.035
+}
