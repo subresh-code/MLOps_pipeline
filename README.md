@@ -208,6 +208,37 @@ make mlflow-ui
 
 Or alongside the API via Docker Compose (`make docker-up`).
 
+## Optional Airflow Orchestration
+
+A lightweight Apache Airflow DAG is included at `dags/fraud_pipeline_dag.py` as coursework evidence of pipeline orchestration. It runs the four core stages sequentially:
+
+```
+ingest_data → train_model → evaluate_model → monitor_drift
+```
+
+**Important:** Airflow has many pinned dependencies and may conflict with this project's environment. Install it in an isolated virtual environment or use Airflow's standalone mode.
+
+```bash
+# Install Airflow in a separate environment (recommended)
+pip install "apache-airflow>=2.10.0"
+
+# Set the AIRFLOW_HOME to the project root for the DAG to be discoverable
+export AIRFLOW_HOME=/path/to/MLOps_pipeline
+
+# Start Airflow in standalone mode (scheduler + webserver on port 8080)
+airflow standalone
+
+# Trigger the DAG manually
+airflow dags trigger fraud_detection_mlops_pipeline
+```
+
+Alternatively, from the Airflow web UI (http://localhost:8080):
+1. Find the DAG named `fraud_detection_mlops_pipeline`
+2. Toggle the switch to unpause it
+3. Click the play button (▶ Trigger DAG)
+
+The primary reproducible pipeline remains the Makefile targets.
+
 ## Limitations
 
 - **Monitoring is data-drift only**: The monitor uses Evidently's `DataDriftPreset` to compare feature distributions. Performance monitoring (tracking precision, recall, and accuracy over time) requires labelled production data, which is not available in a static dataset context.
@@ -242,6 +273,8 @@ Or alongside the API via Docker Compose (`make docker-up`).
 │   ├── test_data_processing.py
 │   ├── test_predict.py
 │   └── test_api.py
+├── dags/
+│   └── fraud_pipeline_dag.py     # Optional Airflow orchestration DAG
 ├── notebooks/
 │   └── 01_eda_fraud_detection.ipynb
 ├── Dockerfile

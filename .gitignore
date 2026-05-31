@@ -24,3 +24,9 @@ Thumbs.db
 .env
 .ipynb_checkpoints/
 *.log
+airflow.cfg
+airflow.db
+airflow.db-shm
+airflow.db-wal
+simple_auth_manager_passwords*.json
+logs/
