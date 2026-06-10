@@ -1,3 +1,4 @@
+import os
 from pathlib import Path
 
 PROJECT_ROOT = Path(__file__).parent.parent
@@ -84,3 +85,16 @@ API_PORT = 8000
 
 DRIFT_THRESHOLD = 0.05
 REFERENCE_SAMPLE_SIZE = 5000
+
+# MariaDB ColumnStore
+COLUMNSTORE_HOST = os.getenv("COLUMNSTORE_HOST", "localhost")
+COLUMNSTORE_PORT = int(os.getenv("COLUMNSTORE_PORT", "3307"))
+COLUMNSTORE_USER = os.getenv("COLUMNSTORE_USER", "analyst")
+COLUMNSTORE_PASSWORD = os.getenv("COLUMNSTORE_PASSWORD", "analyst123")
+COLUMNSTORE_DATABASE = os.getenv("COLUMNSTORE_DATABASE", "fraud_analytics")
+COLUMNSTORE_TABLE = "fraud_transactions"
+
+# Redis
+REDIS_HOST = os.getenv("REDIS_HOST", "localhost")
+REDIS_PORT = int(os.getenv("REDIS_PORT", "6379"))
+REDIS_TTL = 3600

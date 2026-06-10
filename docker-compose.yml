@@ -1,4 +1,6 @@
 services:
+
+  # ── Backend API ──────────────────────────────────────────────────────────
   api:
     build: .
     ports:
@@ -6,14 +8,29 @@ services:
     volumes:
       - ./models:/app/models
       - ./data:/app/data
+      - ./notebooks:/app/notebooks
+      - ./reports:/app/reports
     environment:
       - PYTHONPATH=/app
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - COLUMNSTORE_HOST=mariadb-columnstore
+      - COLUMNSTORE_PORT=3306
+      - COLUMNSTORE_USER=analyst
+      - COLUMNSTORE_PASSWORD=analyst123
+      - COLUMNSTORE_DATABASE=fraud_analytics
+    depends_on:
+      redis:
+        condition: service_healthy
+      mariadb-columnstore:
+        condition: service_healthy
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
       interval: 30s
       timeout: 10s
       retries: 3
 
+  # ── MLflow tracking server ───────────────────────────────────────────────
   mlflow:
     image: python:3.11-slim
     ports:
@@ -26,3 +43,53 @@ services:
                mlflow server --host 0.0.0.0 --port 5000
                --backend-store-uri sqlite:///mlruns/mlflow.db
                --default-artifact-root ./mlruns"
+
+  # ── Redis (prediction cache) ─────────────────────────────────────────────
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6380:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+  # ── MariaDB ColumnStore (columnar analytical store) ──────────────────────
+  mariadb-columnstore:
+    image: mariadb/columnstore:latest
+    privileged: true
+    ports:
+      - "3307:3306"
+    environment:
+      - MARIADB_ROOT_PASSWORD=rootpassword
+      - MARIADB_DATABASE=fraud_analytics
+      - MARIADB_USER=analyst
+      - MARIADB_PASSWORD=analyst123
+    volumes:
+      - mariadb_data:/var/lib/mysql
+      - ./data/sql:/docker-entrypoint-initdb.d
+    healthcheck:
+      test: ["CMD", "mariadb", "-u", "root", "-prootpassword", "-e", "SELECT 1"]
+      interval: 30s
+      timeout: 15s
+      retries: 5
+      start_period: 60s
+
+  # ── React frontend ───────────────────────────────────────────────────────
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    ports:
+      - "3000:5173"
+    volumes:
+      - ./frontend/src:/app/src
+      - ./frontend/public:/app/public
+    environment:
+      - VITE_API_URL=http://localhost:8000
+    depends_on:
+      - api
+
+volumes:
+  mariadb_data:

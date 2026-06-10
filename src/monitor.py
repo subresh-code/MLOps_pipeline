@@ -1,6 +1,7 @@
 import json
 import logging
 import warnings
+from pathlib import Path
 
 import numpy as np
 import pandas as pd
@@ -42,7 +43,7 @@ def _fallback_drift(ref: pd.DataFrame, cur: pd.DataFrame) -> dict:
     }
 
 
-def run_drift_monitor():
+def run_drift_monitor(current_data_path: str | None = None, output_json_path: str | None = None):
     from src.config import (
         DRIFT_REPORT_HTML,
         DRIFT_SUMMARY_JSON,
@@ -64,11 +65,12 @@ def run_drift_monitor():
     logger.info(f"Reference: {ref.shape[0]} rows, {ref.shape[1]} features")
 
     logger.info("Loading current data...")
-    if not PROCESSED_TEST_FILE.exists():
+    cur_path = Path(current_data_path) if current_data_path else PROCESSED_TEST_FILE
+    if not cur_path.exists():
         raise FileNotFoundError(
-            f"Test data not found at {PROCESSED_TEST_FILE}. Run training first."
+            f"Current data not found at {cur_path}. Run training (or generate-drift) first."
         )
-    cur = pd.read_parquet(PROCESSED_TEST_FILE)
+    cur = pd.read_parquet(cur_path)
     if TARGET in cur.columns:
         cur = cur.drop(columns=[TARGET])
         logger.info("Dropped target column from current data")
@@ -170,9 +172,11 @@ def run_drift_monitor():
         logger.info(f"Fallback drift report saved to {DRIFT_REPORT_HTML}")
 
     # Save JSON summary
-    with open(DRIFT_SUMMARY_JSON, "w") as f:
+    json_out = Path(output_json_path) if output_json_path else DRIFT_SUMMARY_JSON
+    json_out.parent.mkdir(parents=True, exist_ok=True)
+    with open(json_out, "w") as f:
         json.dump(drift_result, f, indent=2, default=str)
-    logger.info(f"Drift summary saved to {DRIFT_SUMMARY_JSON}")
+    logger.info(f"Drift summary saved to {json_out}")
 
     print("\n" + "=" * 55)
     print("  DRIFT MONITORING COMPLETE")
@@ -191,5 +195,25 @@ def run_drift_monitor():
 
 
 if __name__ == "__main__":
+    import argparse
+
+    parser = argparse.ArgumentParser(description="Run drift monitoring")
+    parser.add_argument(
+        "--current-data",
+        type=str,
+        default=None,
+        help="Path to current data Parquet (default: data/processed/test.parquet)",
+    )
+    parser.add_argument(
+        "--output-json",
+        type=str,
+        default=None,
+        help="Override path for drift summary JSON output",
+    )
+    args = parser.parse_args()
+
     logging.basicConfig(level=logging.INFO, format="%(levelname)s:%(name)s:%(message)s")
-    run_drift_monitor()
+    run_drift_monitor(
+        current_data_path=args.current_data,
+        output_json_path=args.output_json,
+    )
