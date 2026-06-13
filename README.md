@@ -1,40 +1,55 @@
-# CMP6230 MLOps Pipeline for IEEE-CIS Fraud Detection
+# CMP6230 MLOps Pipeline — IEEE-CIS Fraud Detection
 
-A data management and machine learning operations pipeline for credit card fraud detection using the IEEE-CIS Fraud Detection dataset. The pipeline implements five standard MLOps stages — Data Ingestion, Data Preprocessing, Model Development, Model Deployment, and Model Monitoring — using XGBoost, FastAPI, MLflow, Docker, and Evidently.
+A full MLOps pipeline for credit card fraud detection using the IEEE-CIS Fraud Detection dataset. Implements five standard MLOps stages — Data Ingestion, Preprocessing, Model Training, Deployment, and Monitoring — with XGBoost, FastAPI, MLflow, MariaDB ColumnStore, Redis, Evidently, Docker Compose, and a React dashboard.
 
 ## Dataset
 
-**Source**: [IEEE-CIS Fraud Detection](https://www.kaggle.com/c/ieee-fraud-detection/data) on Kaggle.
+**Source**: [IEEE-CIS Fraud Detection](https://www.kaggle.com/c/ieee-fraud-detection/data) (Kaggle)
 
-The pipeline expects the following raw CSV files inside `data/raw/`:
+Place the following raw CSV files in `data/raw/` before running the pipeline:
 
-| File | Description |
-|------|-------------|
-| `train_transaction.csv` | Transaction-level features (590,540 rows, 394 columns) |
-| `train_identity.csv` | Identity/vendor features (144,233 rows, 41 columns) |
+| File | Rows | Columns |
+|------|------|---------|
+| `train_transaction.csv` | 590,540 | 394 |
+| `train_identity.csv` | 144,233 | 41 |
 
-These files are **not included** in the submission ZIP due to their size (the dataset is approximately 1 GB combined). They must be downloaded from Kaggle and placed in `data/raw/` before running the training pipeline.
+The dataset contains 590,540 anonymised transactions with a **3.5% fraud rate** (≈27:1 class imbalance). The two files are joined on `TransactionID` (LEFT JOIN) to produce a single 435-feature table.
 
-The dataset contains 590,540 anonymised transactions with a 3.5 % fraud rate (approximately 27:1 class imbalance).
+> Raw CSVs are not included in the repo (~1 GB combined). Download from Kaggle and place in `data/raw/`.
+
+## Architecture
+
+| Layer | Technology | Purpose |
+|-------|-----------|---------|
+| Orchestration | Apache Airflow DAG | End-to-end pipeline scheduling |
+| Experiment tracking | MLflow | Metrics, parameters, artefact versioning |
+| Serving | FastAPI + Docker | REST prediction API with Redis caching |
+| Analytical store | MariaDB ColumnStore | Columnar SQL queries on processed data |
+| Caching | Redis | Prediction result caching (TTL 3600s) |
+| Monitoring | Evidently | Feature distribution drift detection |
+| Frontend | React 18 + Vite + Tailwind | Dashboard for predictions, EDA, metrics, drift |
 
 ## Pipeline Stages
 
 | Stage | Module | Description |
 |-------|--------|-------------|
-| Data Ingestion | `src.data_processing` | Loads CSV files, validates schema, performs LEFT JOIN on `TransactionID`, saves ingestion summary |
-| Data Preprocessing | `src.preprocessing` | Fits label encoders, median imputation, and column alignment on the training split only |
-| Model Development | `src.train` | Trains an XGBoost classifier with `scale_pos_weight=20`, logs metrics and artefacts to MLflow |
-| Model Deployment | `src.api` | Serves predictions via FastAPI, containerised with Docker and Docker Compose |
-| Model Monitoring | `src.monitor` | Compares reference and current data distributions using Evidently's `DataDriftPreset` |
+| Data Ingestion | `src.data_processing` | Load CSVs, validate schema, LEFT JOIN on `TransactionID`, save Parquet |
+| Preprocessing | `src.preprocessing` | Median imputation, label encoding, leakage-safe fit-on-train-only |
+| Model Training | `src.train` | XGBoost with `scale_pos_weight=20`, logged to MLflow |
+| Evaluation | `src.evaluate` | AUC-ROC, F1, precision, recall; confusion matrix, ROC, PR curve, feature importance |
+| Deployment | `src.api` | FastAPI with Redis-cached `/predict`; static EDA and report figure serving |
+| Monitoring | `src.monitor` | Evidently `DataDriftPreset` against reference data; supports custom current-data path |
+| Drift Simulation | `src.generate_drift_data` | Three synthetic drift scenarios (A/B/C) for monitoring demonstration |
+| Analytical Queries | `src.analytics` | Load processed data into MariaDB ColumnStore; run fraud-rate SQL queries |
 
-## Installation
+## Quick Start
 
-### 1. Create a virtual environment
+### 1. Create and activate a virtual environment
 
 ```bash
 python -m venv venv
-source venv/bin/activate          # macOS / Linux
-# venv\Scripts\activate            # Windows
+source venv/bin/activate        # Linux / macOS
+# venv\Scripts\activate         # Windows
 ```
 
 ### 2. Install dependencies
@@ -46,107 +61,160 @@ pip install -r requirements.txt
 
 ### 3. Download the dataset
 
-1. Download the IEEE-CIS Fraud Detection dataset from [Kaggle](https://www.kaggle.com/c/ieee-fraud-detection/data)
-2. Place `train_transaction.csv` and `train_identity.csv` inside `data/raw/`
-3. The directory should look like:
+Download `train_transaction.csv` and `train_identity.csv` from [Kaggle](https://www.kaggle.com/c/ieee-fraud-detection/data) and place them in `data/raw/`.
 
-```
-data/raw/
-├── train_transaction.csv
-└── train_identity.csv
-```
-
-## Main Commands
-
-All common operations are available as `make` targets:
-
-| Command | Description |
-|---------|-------------|
-| `make train` | Run data processing, model training, and log results to MLflow |
-| `make evaluate` | Generate evaluation metrics, classification report, and figures |
-| `make monitor` | Run Evidently data-drift monitoring and generate an HTML report |
-| `PYTHONPATH=. python -m src.evaluate` | Equivalent to `make evaluate` |
-| `PYTHONPATH=. python -m src.monitor` | Equivalent to `make monitor` |
-| `make serve` | Start the FastAPI locally at `http://localhost:8000` |
-| `make test` | Run tests with pytest |
-| `make lint` | Lint source and test files with ruff |
-| `make docker-up` | Build and start API + MLflow UI with Docker Compose |
-| `make docker-down` | Stop Docker Compose services |
-| `make mlflow-ui` | Start a standalone MLflow tracking UI on port 5000 |
-| `make clean` | Remove processed data, model artefacts, and MLflow runs |
-
-### Running ad hoc
+### 4. Run the full pipeline
 
 ```bash
-# Full pipeline (ingestion → preprocessing → training)
-make train
-
-# Evaluate the trained model
-PYTHONPATH=. python -m src.evaluate
-
-# Run drift monitoring
-PYTHONPATH=. python -m src.monitor
-
-# Serve the API locally
-PYTHONPATH=. uvicorn src.api:app --reload
+make train        # ingest → preprocess → train (logs to MLflow)
+make evaluate     # evaluation metrics + figures
+make monitor      # drift report against reference data
 ```
 
-## Generated Outputs
+### 5. Start all services
 
-After running the pipeline, the following artefacts are produced:
+```bash
+docker compose up --build
+```
 
-| Path | Description |
-|------|-------------|
-| `data/processed/train.parquet` | Preprocessed training set (472,432 rows) |
-| `data/processed/test.parquet` | Preprocessed test set (118,108 rows) |
-| `data/processed/reference_data.parquet` | Reference sample for drift monitoring |
-| `models/model.joblib` | Trained XGBoost classifier |
-| `models/preprocessing_artifacts.joblib` | Fitted encoders, medians, and column order |
-| `models/metrics.json` | Evaluation metrics (AUC, F1, precision, recall) |
-| `models/label_encoders.joblib` | Per-column label encoders |
-| `reports/figures/confusion_matrix.png` | Confusion matrix plot |
-| `reports/figures/roc_curve.png` | ROC curve plot |
-| `reports/figures/pr_curve.png` | Precision-recall curve plot |
-| `reports/figures/feature_importance.png` | XGBoost feature importance plot |
-| `reports/metrics/evaluation_metrics.json` | Full evaluation metrics summary |
-| `reports/metrics/classification_report.txt` | Scikit-learn classification report |
-| `reports/metrics/ingestion_summary.json` | Ingestion validation summary |
-| `reports/monitoring/drift_report.html` | Evidently data-drift HTML report |
-| `reports/monitoring/drift_summary.json` | Drift summary in JSON format |
+Services:
+
+| Service | URL | Description |
+|---------|-----|-------------|
+| API | http://localhost:8000 | FastAPI prediction service |
+| Frontend | http://localhost:3000 | React dashboard |
+| MLflow | http://localhost:5001 | Experiment tracking UI |
+| MariaDB ColumnStore | localhost:3307 | Columnar analytical DB |
+| Redis | localhost:6380 | Prediction cache |
+
+## Makefile Targets
+
+| Target | Description |
+|--------|-------------|
+| `make train` | Full pipeline: ingest → preprocess → train |
+| `make evaluate` | Model evaluation + figures |
+| `make monitor` | Drift monitoring (train vs test) |
+| `make serve` | Start FastAPI locally on port 8000 |
+| `make docker-up` | Build and start all Docker Compose services |
+| `make docker-down` | Stop all services |
+| `make load-columnstore` | Load processed Parquet data into MariaDB ColumnStore |
+| `make generate-drift` | Generate all three drift scenario Parquet files |
+| `make monitor-drift SCENARIO=a` | Run drift monitor against scenario a, b, or c |
+| `make frontend-install` | `npm install` inside `frontend/` |
+| `make frontend-dev` | Start Vite dev server locally on port 5173 |
+| `make mlflow-ui` | Start standalone MLflow UI on port 5000 |
+| `make test` | Run pytest |
+| `make lint` | Lint with ruff |
+| `make clean` | Remove processed data, model artefacts, and MLflow runs |
 
 ## API Endpoints
 
-The FastAPI application exposes the following endpoints:
-
 | Endpoint | Method | Description |
 |----------|--------|-------------|
-| `/health` | GET | Returns API status and whether the model is loaded |
-| `/model-info` | GET | Returns model type, expected features, and performance metrics |
-| `/predict` | POST | Accepts a JSON transaction payload and returns `fraud_probability`, `is_fraud`, and `confidence` |
-| `/docs` | GET | Interactive Swagger UI documentation |
+| `/health` | GET | API status, model loaded flag, Redis connected flag |
+| `/model-info` | GET | Model type, feature count, metrics |
+| `/predict` | POST | Fraud prediction; returns `fraud_probability`, `is_fraud`, `confidence`, `cached` |
+| `/eda-summary` | GET | EDA summary stats from `notebooks/eda_summary.json` |
+| `/metrics` | GET | Training and evaluation metrics |
+| `/drift-summary` | GET | Drift summary JSON; `?scenario=a\|b\|c` for synthetic scenarios |
+| `/analytics/queries` | GET | Run ColumnStore SQL queries and return results |
+| `/eda-figures` | GET | List available EDA figure filenames |
+| `/report-figures` | GET | List available report figure filenames |
+| `/static/eda/<file>` | GET | Serve EDA figures from `notebooks/figures/` |
+| `/static/reports/<file>` | GET | Serve report figures from `reports/figures/` |
+| `/docs` | GET | Swagger UI |
 
 Example prediction request:
 
 ```bash
 curl -X POST http://localhost:8000/predict \
   -H "Content-Type: application/json" \
-  -d '{
-    "TransactionAmt": 500.0,
-    "ProductCD": "W",
-    "card4": "visa",
-    "P_emaildomain": "gmail.com"
-  }'
+  -d '{"TransactionAmt": 500.0, "ProductCD": "W", "card4": "visa", "P_emaildomain": "gmail.com"}'
 ```
 
 Example response:
 
 ```json
-{"fraud_probability": 0.526, "is_fraud": true, "confidence": 0.526}
+{"fraud_probability": 0.526, "is_fraud": true, "confidence": 0.526, "cached": false}
 ```
 
-## Testing
+A second identical request returns `"cached": true` (Redis hit).
 
-Tests are written using pytest and cover the three main components:
+## Drift Simulation
+
+Three synthetic drift scenarios are generated from the training reference data:
+
+| Scenario | Type | Description |
+|----------|------|-------------|
+| A | Feature / data drift | `TransactionAmt × 1.5`; top 20 numeric features shifted by +2σ |
+| B | Concept drift | 15% of legitimate transactions randomly relabelled as fraud |
+| C | Covariate shift | All identity columns (`id_01`–`id_38`, `DeviceType`, `DeviceInfo`) dropped |
+
+```bash
+make generate-drift             # generates drifted_a/b/c.parquet in data/processed/
+make monitor-drift SCENARIO=a   # run Evidently against scenario A
+```
+
+Drift scenario reports are saved to `reports/monitoring/drift_summary_<scenario>.json` and are also accessible via `/drift-summary?scenario=a`.
+
+## MariaDB ColumnStore
+
+Processed data can be loaded into MariaDB ColumnStore for columnar SQL analytics:
+
+```bash
+make load-columnstore
+```
+
+This runs `src/analytics.py` which:
+1. Reads `data/processed/train.parquet` and `test.parquet`
+2. Infers the DDL from Parquet column dtypes (float64 → DOUBLE, int64 → BIGINT)
+3. Creates `fraud_transactions` with `ENGINE=ColumnStore`
+4. Loads data in chunks of 5,000 rows
+5. Runs five pre-built analytical queries (fraud rate by product, amount by fraud status, fraud by card type, C-feature comparison, summary stats)
+
+The `/analytics/queries` API endpoint runs these queries on demand.
+
+## Frontend
+
+The React dashboard (React 18, Vite 5, Tailwind CSS, Axios, React Router v6) has five pages:
+
+| Page | Path | Description |
+|------|------|-------------|
+| Predict | `/` | Transaction form with fraud probability bar and Redis cache indicator |
+| EDA | `/eda` | Summary stats and EDA figures |
+| Metrics | `/metrics` | Model performance metrics and evaluation plots |
+| Monitor | `/monitor` | Drift summary table with p-values; scenario selector (A/B/C) |
+| Analytics | `/analytics` | ColumnStore SQL query results |
+
+Run locally (without Docker):
+
+```bash
+make frontend-install
+make frontend-dev       # http://localhost:5173
+```
+
+## Generated Artefacts
+
+| Path | Description |
+|------|-------------|
+| `data/processed/train.parquet` | Preprocessed training set (472,432 rows, 119 columns) |
+| `data/processed/test.parquet` | Preprocessed test set (118,108 rows) |
+| `data/processed/reference_data.parquet` | Reference sample for drift monitoring |
+| `data/processed/drifted_a.parquet` | Synthetic drift scenario A |
+| `data/processed/drifted_b.parquet` | Synthetic drift scenario B |
+| `data/processed/drifted_c.parquet` | Synthetic drift scenario C |
+| `models/model.joblib` | Trained XGBoost classifier |
+| `models/preprocessing_artifacts.joblib` | Fitted encoders, medians, column order |
+| `models/metrics.json` | Evaluation metrics |
+| `reports/figures/` | Confusion matrix, ROC curve, PR curve, feature importance |
+| `reports/metrics/evaluation_metrics.json` | Full evaluation metrics |
+| `reports/metrics/classification_report.txt` | Scikit-learn classification report |
+| `reports/metrics/ingestion_summary.json` | Ingestion validation summary |
+| `reports/monitoring/drift_report.html` | Evidently HTML drift report |
+| `reports/monitoring/drift_summary.json` | Drift summary JSON |
+| `reports/monitoring/drift_summary_<a\|b\|c>.json` | Per-scenario drift summaries |
+
+## Testing
 
 ```bash
 make test
@@ -160,126 +228,73 @@ pytest tests/ -v --tb=short
 | `tests/test_predict.py` | Preprocessing pipeline, feature engineering, prediction output |
 | `tests/test_api.py` | API endpoints, health check, prediction route, error handling |
 
-## Deployment
-
-### Local (Docker Compose)
-
-```bash
-make docker-up
-```
-
-Starts two containers:
-- **API** (`fraud-detection-api`) on port 8000
-- **MLflow** (`mlflow-server`) on port 5000
-
-### FastAPI (standalone)
-
-```bash
-make serve
-# or
-PYTHONPATH=. uvicorn src.api:app --reload --host 0.0.0.0 --port 8000
-```
-
-### GCP Cloud Run
-
-The API can be deployed to Google Cloud Run. A `.gcloudignore` file is included for artefact filtering.
-
-```bash
-gcloud config set project YOUR_PROJECT_ID
-gcloud services enable run.googleapis.com artifactregistry.googleapis.com cloudbuild.googleapis.com
-gcloud builds submit --tag gcr.io/YOUR_PROJECT_ID/fraud-detection-api
-gcloud run deploy fraud-detection-api \
-  --image gcr.io/YOUR_PROJECT_ID/fraud-detection-api \
-  --platform managed --region us-central1 --port 8000 --memory 1Gi --allow-unauthenticated
-```
-
-### CI/CD
-
-GitHub Actions (`.github/workflows/ci.yml`) runs on push to `main`: lint (ruff) → test (pytest) → Docker build verification.
-
-## Experiment Tracking
-
-MLflow tracks each training run. To view experiment history:
-
-```bash
-make mlflow-ui
-# then open http://localhost:5000
-```
-
-Or alongside the API via Docker Compose (`make docker-up`).
-
 ## Optional Airflow Orchestration
 
-A lightweight Apache Airflow DAG is included at `dags/fraud_pipeline_dag.py` as coursework evidence of pipeline orchestration. It runs the four core stages sequentially:
+A DAG at `dags/fraud_pipeline_dag.py` orchestrates the four core pipeline stages sequentially:
 
 ```
 ingest_data → train_model → evaluate_model → monitor_drift
 ```
 
-**Important:** Airflow has many pinned dependencies and may conflict with this project's environment. Install it in an isolated virtual environment or use Airflow's standalone mode.
+Install Airflow in a separate environment to avoid dependency conflicts:
 
 ```bash
-# Install Airflow in a separate environment (recommended)
 pip install "apache-airflow>=2.10.0"
-
-# Set the AIRFLOW_HOME to the project root for the DAG to be discoverable
-export AIRFLOW_HOME=/path/to/MLOps_pipeline
-
-# Start Airflow in standalone mode (scheduler + webserver on port 8080)
+export AIRFLOW_HOME=/path/to/mlops_pipeline
 airflow standalone
-
-# Trigger the DAG manually
 airflow dags trigger fraud_detection_mlops_pipeline
 ```
-
-Alternatively, from the Airflow web UI (http://localhost:8080):
-1. Find the DAG named `fraud_detection_mlops_pipeline`
-2. Toggle the switch to unpause it
-3. Click the play button (▶ Trigger DAG)
-
-The primary reproducible pipeline remains the Makefile targets.
-
-## Limitations
-
-- **Monitoring is data-drift only**: The monitor uses Evidently's `DataDriftPreset` to compare feature distributions. Performance monitoring (tracking precision, recall, and accuracy over time) requires labelled production data, which is not available in a static dataset context.
-- **Production performance monitoring**: Without a live stream of ground-truth labels, the pipeline cannot demonstrate automated performance degradation detection.
-- **Schema validation is lightweight**: Column existence and row-count checks are performed at ingestion, but full data-type and range validation is not implemented.
-- **No automated retraining**: While drift can be detected, retraining must be triggered manually.
-- **Raw Kaggle data must be downloaded separately**: The raw CSVs exceed typical submission size limits and are not included in the ZIP.
 
 ## Project Structure
 
 ```
 ├── data/
-│   ├── raw/                    # Place train_transaction.csv and train_identity.csv here
-│   └── processed/              # Output parquet files (train, test, reference)
-├── models/                     # Serialised model and preprocessing artefacts
+│   ├── raw/                        # train_transaction.csv, train_identity.csv (download separately)
+│   ├── processed/                  # Parquet outputs (train, test, reference, drifted_a/b/c)
+│   └── sql/
+│       └── init_columnstore.sql    # MariaDB ColumnStore DB and user initialisation
+├── frontend/                       # React 18 + Vite + Tailwind dashboard
+│   ├── src/
+│   │   ├── pages/                  # Predict, EDA, Metrics, Monitor, Analytics
+│   │   ├── components/             # Navbar, StatCard
+│   │   └── api/index.js            # Axios API client
+│   ├── Dockerfile
+│   └── vite.config.js
+├── models/                         # Serialised model and preprocessing artefacts
+├── notebooks/
+│   └── 01_eda_fraud_detection.ipynb
 ├── reports/
-│   ├── figures/                # Evaluation plots
-│   ├── metrics/                # Metrics JSON and ingestion summary
-│   └── monitoring/             # Drift reports
+│   ├── figures/                    # Evaluation plots
+│   ├── metrics/                    # Metrics JSON and classification report
+│   └── monitoring/                 # Evidently HTML + JSON drift reports
 ├── src/
-│   ├── __init__.py
-│   ├── config.py               # Paths, hyperparameters, feature lists
-│   ├── data_processing.py      # Data loading, validation, train/test split
-│   ├── preprocessing.py        # Feature engineering, encoders, imputation
-│   ├── train.py                # XGBoost training with MLflow logging
-│   ├── evaluate.py             # Model evaluation and figure generation
-│   ├── predict.py              # Prediction service (preprocessing + inference)
-│   ├── monitor.py              # Evidently data-drift monitoring
-│   └── api.py                  # FastAPI application
+│   ├── config.py                   # Paths, hyperparameters, Redis/ColumnStore config
+│   ├── data_processing.py          # CSV loading, validation, LEFT JOIN, Parquet output
+│   ├── preprocessing.py            # Imputation, label encoding (fit-on-train-only)
+│   ├── train.py                    # XGBoost training with MLflow logging
+│   ├── evaluate.py                 # Metrics, plots
+│   ├── predict.py                  # Inference with preprocessing pipeline
+│   ├── api.py                      # FastAPI: /predict (Redis-cached), all endpoints
+│   ├── monitor.py                  # Evidently drift monitoring
+│   ├── analytics.py                # MariaDB ColumnStore loader and SQL queries
+│   └── generate_drift_data.py      # Synthetic drift scenario generator
 ├── tests/
-│   ├── __init__.py
 │   ├── test_data_processing.py
 │   ├── test_predict.py
 │   └── test_api.py
 ├── dags/
-│   └── fraud_pipeline_dag.py     # Optional Airflow orchestration DAG
-├── notebooks/
-│   └── 01_eda_fraud_detection.ipynb
-├── Dockerfile
-├── docker-compose.yml
+│   └── fraud_pipeline_dag.py       # Optional Airflow DAG
+├── Dockerfile                      # API image
+├── docker-compose.yml              # API, MLflow, Redis, MariaDB ColumnStore, Frontend
 ├── Makefile
 ├── requirements.txt
-└── .github/workflows/ci.yml
+└── .github/workflows/ci.yml        # CI: lint → test → Docker build
 ```
+
+## Limitations
+
+- Monitoring is **data-drift only** — performance monitoring (precision/recall over time) requires ground-truth labels not available in a static dataset context.
+- No automated retraining — drift can be detected but retraining must be triggered manually.
+- Schema validation is lightweight — column existence and row-count checks only.
+- MariaDB ColumnStore requires `privileged: true` in Docker Compose on Linux.
+- Raw Kaggle CSVs must be downloaded separately (~1 GB).
