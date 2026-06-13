@@ -1,0 +1,165 @@
+<mxfile host="app.diagrams.net">
+  <diagram id="mlops-arch" name="MLOps Architecture">
+    <mxGraphModel dx="983" dy="679" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1460" pageHeight="860" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="title" parent="1" style="text;html=1;strokeColor=none;fillColor=none;fontColor=#000000;fontStyle=1;fontSize=15;align=center;verticalAlign=middle;" value="MLOps Pipeline Architecture — IEEE-CIS Fraud Detection  (Subresh Thakulla, 23189651)" vertex="1">
+          <mxGeometry height="28" width="1400" x="30" y="8" as="geometry" />
+        </mxCell>
+        <mxCell id="groupA" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=none;strokeColor=#000000;dashed=1;verticalAlign=top;align=left;spacing=8;fontStyle=2;fontColor=#000000;arcSize=2;" value="Batch ML Pipeline — orchestrated by Apache Airflow  (dags/fraud_pipeline_dag.py:  ingest_data [temporal split] → train_model → evaluate_model → monitor_drift)" vertex="1">
+          <mxGeometry height="250" width="1420" x="20" y="48" as="geometry" />
+        </mxCell>
+        <mxCell id="bAirflow" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f0f0f0;strokeColor=#000000;dashed=1;fontColor=#000000;fontStyle=1;fontSize=10;arcSize=20;" value="Apache Airflow" vertex="1">
+          <mxGeometry height="26" width="120" x="1300" y="36" as="geometry" />
+        </mxCell>
+        <mxCell id="t1" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;fontColor=#000000;align=left;verticalAlign=top;spacing=8;fontSize=11;arcSize=6;" value="&lt;b&gt;ingest_data&lt;/b&gt;&lt;br&gt;&lt;i&gt;src.data_processing&lt;/i&gt;&lt;br&gt;&lt;br&gt;• Load 2 CSVs (pandas)&lt;br&gt;• LEFT JOIN on TransactionID&lt;br&gt;• Schema + row-count validation&lt;br&gt;• Temporal 80/20 split (sort by TransactionDT)" vertex="1">
+          <mxGeometry height="150" width="320" x="40" y="92" as="geometry" />
+        </mxCell>
+        <mxCell id="bPandas" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f0f0f0;strokeColor=#000000;dashed=1;fontColor=#000000;fontStyle=1;fontSize=10;arcSize=20;" value="pandas" vertex="1">
+          <mxGeometry height="26" width="80" x="270" y="79" as="geometry" />
+        </mxCell>
+        <mxCell id="t2" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;fontColor=#000000;align=left;verticalAlign=top;spacing=8;fontSize=11;arcSize=6;" value="&lt;b&gt;train_model&lt;/b&gt;&lt;br&gt;&lt;i&gt;src.preprocessing + src.train&lt;/i&gt;&lt;br&gt;&lt;br&gt;• Median impute + label encode&lt;br&gt;• Fit-on-train only (no leakage)&lt;br&gt;• XGBoost (scale_pos_weight=20)&lt;br&gt;• Log params/metrics to MLflow" vertex="1">
+          <mxGeometry height="150" width="320" x="390" y="92" as="geometry" />
+        </mxCell>
+        <mxCell id="bXgb" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f0f0f0;strokeColor=#000000;dashed=1;fontColor=#000000;fontStyle=1;fontSize=10;arcSize=20;" value="XGBoost + scikit-learn" vertex="1">
+          <mxGeometry height="26" width="160" x="540" y="79" as="geometry" />
+        </mxCell>
+        <mxCell id="t3" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;fontColor=#000000;align=left;verticalAlign=top;spacing=8;fontSize=11;arcSize=6;" value="&lt;b&gt;evaluate_model&lt;/b&gt;&lt;br&gt;&lt;i&gt;src.evaluate&lt;/i&gt;&lt;br&gt;&lt;br&gt;• AUC-ROC 0.943, AP 0.661&lt;br&gt;• F1 / precision / recall&lt;br&gt;• Confusion matrix, ROC, PR&lt;br&gt;• Feature importance plot" vertex="1">
+          <mxGeometry height="150" width="320" x="740" y="92" as="geometry" />
+        </mxCell>
+        <mxCell id="bMpl" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f0f0f0;strokeColor=#000000;dashed=1;fontColor=#000000;fontStyle=1;fontSize=10;arcSize=20;" value="matplotlib" vertex="1">
+          <mxGeometry height="26" width="100" x="950" y="79" as="geometry" />
+        </mxCell>
+        <mxCell id="t4" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;fontColor=#000000;align=left;verticalAlign=top;spacing=8;fontSize=11;arcSize=6;" value="&lt;b&gt;monitor_drift&lt;/b&gt;&lt;br&gt;&lt;i&gt;src.monitor&lt;/i&gt;&lt;br&gt;&lt;br&gt;• Evidently DataDriftPreset&lt;br&gt;• 5000-row reference vs current&lt;br&gt;• Scenarios A / B / C&lt;br&gt;• drift_summary.json + HTML" vertex="1">
+          <mxGeometry height="150" width="320" x="1090" y="92" as="geometry" />
+        </mxCell>
+        <mxCell id="bEvidently" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f0f0f0;strokeColor=#000000;dashed=1;fontColor=#000000;fontStyle=1;fontSize=10;arcSize=20;" value="Evidently AI" vertex="1">
+          <mxGeometry height="26" width="110" x="1300" y="79" as="geometry" />
+        </mxCell>
+        <mxCell id="eT1T2" edge="1" parent="1" source="t1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;strokeColor=#000000;endArrow=block;" target="t2">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="eT2T3" edge="1" parent="1" source="t2" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;strokeColor=#000000;endArrow=block;" target="t3">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="eT3T4" edge="1" parent="1" source="t3" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;strokeColor=#000000;endArrow=block;" target="t4">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="eRetrain" edge="1" parent="1" source="t4" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;strokeColor=#000000;dashed=1;endArrow=block;fontColor=#000000;fontSize=10;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=1;entryDx=0;entryDy=0;" target="t2" value="retraining trigger (drift &gt; 0.05)">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1250" y="278" />
+              <mxPoint x="550" y="278" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="storeLabel" parent="1" style="text;html=1;strokeColor=none;fillColor=none;fontColor=#000000;fontStyle=1;align=left;verticalAlign=middle;" value="Storage Layer (multi-tier)" vertex="1">
+          <mxGeometry height="22" width="300" x="20" y="322" as="geometry" />
+        </mxCell>
+        <mxCell id="cyRaw" parent="1" style="shape=cylinder3;whiteSpace=wrap;html=1;boundedLbl=1;fillColor=#ffffff;strokeColor=#000000;fontColor=#000000;fontSize=10;" value="data/raw&#xa;train_transaction.csv&#xa;train_identity.csv" vertex="1">
+          <mxGeometry height="115" width="170" x="40" y="352" as="geometry" />
+        </mxCell>
+        <mxCell id="bCsv" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f0f0f0;strokeColor=#000000;dashed=1;fontColor=#000000;fontStyle=1;fontSize=10;arcSize=20;" value="CSV" vertex="1">
+          <mxGeometry height="24" width="80" x="85" y="472" as="geometry" />
+        </mxCell>
+        <mxCell id="cyParquet" parent="1" style="shape=cylinder3;whiteSpace=wrap;html=1;boundedLbl=1;fillColor=#ffffff;strokeColor=#000000;fontColor=#000000;fontSize=10;" value="data/processed&#xa;train / test / reference&#xa;drifted_a / b / c&#xa;(Parquet, Snappy)" vertex="1">
+          <mxGeometry height="115" width="170" x="270" y="352" as="geometry" />
+        </mxCell>
+        <mxCell id="bArrow" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f0f0f0;strokeColor=#000000;dashed=1;fontColor=#000000;fontStyle=1;fontSize=10;arcSize=20;" value="PyArrow / Parquet" vertex="1">
+          <mxGeometry height="24" width="130" x="290" y="472" as="geometry" />
+        </mxCell>
+        <mxCell id="cyModels" parent="1" style="shape=cylinder3;whiteSpace=wrap;html=1;boundedLbl=1;fillColor=#ffffff;strokeColor=#000000;fontColor=#000000;fontSize=9;" value="models/&#xa;model.joblib&#xa;preprocessing_artifacts.joblib&#xa;feature_columns.joblib" vertex="1">
+          <mxGeometry height="115" width="170" x="500" y="352" as="geometry" />
+        </mxCell>
+        <mxCell id="bJoblib" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f0f0f0;strokeColor=#000000;dashed=1;fontColor=#000000;fontStyle=1;fontSize=10;arcSize=20;" value="joblib" vertex="1">
+          <mxGeometry height="24" width="80" x="545" y="472" as="geometry" />
+        </mxCell>
+        <mxCell id="cyMLflow" parent="1" style="shape=cylinder3;whiteSpace=wrap;html=1;boundedLbl=1;fillColor=#ffffff;strokeColor=#000000;fontColor=#000000;fontSize=10;" value="MLflow store&#xa;mlruns/mlflow.db&#xa;experiment:&#xa;fraud-detection" vertex="1">
+          <mxGeometry height="115" width="170" x="730" y="352" as="geometry" />
+        </mxCell>
+        <mxCell id="bMlflowStore" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f0f0f0;strokeColor=#000000;dashed=1;fontColor=#000000;fontStyle=1;fontSize=10;arcSize=20;" value="MLflow + SQLite" vertex="1">
+          <mxGeometry height="24" width="140" x="745" y="472" as="geometry" />
+        </mxCell>
+        <mxCell id="cyCS" parent="1" style="shape=cylinder3;whiteSpace=wrap;html=1;boundedLbl=1;fillColor=#ffffff;strokeColor=#000000;fontColor=#000000;fontSize=9;" value="MariaDB ColumnStore&#xa;fraud_analytics.&#xa;fraud_transactions&#xa;(ENGINE=ColumnStore)" vertex="1">
+          <mxGeometry height="115" width="170" x="960" y="352" as="geometry" />
+        </mxCell>
+        <mxCell id="bMaria" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f0f0f0;strokeColor=#000000;dashed=1;fontColor=#000000;fontStyle=1;fontSize=10;arcSize=20;" value="MariaDB ColumnStore" vertex="1">
+          <mxGeometry height="24" width="140" x="975" y="472" as="geometry" />
+        </mxCell>
+        <mxCell id="cyRedis" parent="1" style="shape=cylinder3;whiteSpace=wrap;html=1;boundedLbl=1;fillColor=#ffffff;strokeColor=#000000;fontColor=#000000;fontSize=10;" value="Redis&#xa;prediction cache&#xa;(SHA-256 key, TTL 3600s)" vertex="1">
+          <mxGeometry height="115" width="170" x="1190" y="352" as="geometry" />
+        </mxCell>
+        <mxCell id="bRedis" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f0f0f0;strokeColor=#000000;dashed=1;fontColor=#000000;fontStyle=1;fontSize=10;arcSize=20;" value="Redis" vertex="1">
+          <mxGeometry height="24" width="80" x="1235" y="472" as="geometry" />
+        </mxCell>
+        <mxCell id="eRawT1" edge="1" parent="1" source="cyRaw" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;strokeColor=#000000;endArrow=block;fontSize=10;fontColor=#000000;" target="t1" value="read CSV">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="eT1Parquet" edge="1" parent="1" source="t1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;strokeColor=#000000;endArrow=block;fontSize=10;fontColor=#000000;" target="cyParquet" value="write Parquet">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="eParquetT2" edge="1" parent="1" source="cyParquet" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;strokeColor=#000000;endArrow=block;fontSize=10;fontColor=#000000;" target="t2" value="read">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="eT2Models" edge="1" parent="1" source="t2" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;strokeColor=#000000;endArrow=block;fontSize=10;fontColor=#000000;" target="cyModels" value="write artefacts">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="eT2MLflow" edge="1" parent="1" source="t2" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;strokeColor=#000000;dashed=1;endArrow=block;fontSize=10;fontColor=#000000;" target="cyMLflow" value="log run">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="eModelsT3" edge="1" parent="1" source="cyModels" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;strokeColor=#000000;dashed=1;endArrow=block;fontSize=10;fontColor=#000000;" target="t3" value="load model">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="eParquetT4" edge="1" parent="1" source="cyParquet" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;strokeColor=#000000;dashed=1;endArrow=block;fontSize=10;fontColor=#000000;" target="t4" value="reference / drifted">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="eParquetCS" edge="1" parent="1" source="cyParquet" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;strokeColor=#000000;dashed=1;endArrow=block;fontSize=10;fontColor=#000000;" target="cyCS" value="src.analytics load (chunked)">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="groupB" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=none;strokeColor=#000000;dashed=1;verticalAlign=top;align=left;spacing=8;fontStyle=2;fontColor=#000000;arcSize=2;" value="Containerised Serving Stack — Docker Compose (docker-compose.yml)" vertex="1">
+          <mxGeometry height="250" width="1420" x="20" y="540" as="geometry" />
+        </mxCell>
+        <mxCell id="bDocker" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f0f0f0;strokeColor=#000000;dashed=1;fontColor=#000000;fontStyle=1;fontSize=10;arcSize=20;" value="Docker Compose" vertex="1">
+          <mxGeometry height="26" width="120" x="1300" y="528" as="geometry" />
+        </mxCell>
+        <mxCell id="reactBox" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;fontColor=#000000;align=left;verticalAlign=top;spacing=8;fontSize=11;arcSize=6;" value="&lt;b&gt;React Frontend&lt;/b&gt;  (frontend, :3000)&lt;br&gt;&lt;i&gt;Vite + Tailwind&lt;/i&gt;&lt;br&gt;&lt;br&gt;Pages: Predict · EDA ·&lt;br&gt;Metrics · Monitor · Analytics" vertex="1">
+          <mxGeometry height="150" width="320" x="40" y="585" as="geometry" />
+        </mxCell>
+        <mxCell id="bReact" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f0f0f0;strokeColor=#000000;dashed=1;fontColor=#000000;fontStyle=1;fontSize=10;arcSize=20;" value="React + Vite" vertex="1">
+          <mxGeometry height="26" width="110" x="250" y="572" as="geometry" />
+        </mxCell>
+        <mxCell id="mlflowBox" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;fontColor=#000000;align=left;verticalAlign=top;spacing=8;fontSize=11;arcSize=6;" value="&lt;b&gt;MLflow UI&lt;/b&gt;  (mlflow, :5001)&lt;br&gt;&lt;br&gt;Experiment tracking&lt;br&gt;backend: sqlite mlflow.db&lt;br&gt;artifact root: ./mlruns" vertex="1">
+          <mxGeometry height="125" width="170" x="645" y="572" as="geometry" />
+        </mxCell>
+        <mxCell id="bMlflowUi" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f0f0f0;strokeColor=#000000;dashed=1;fontColor=#000000;fontStyle=1;fontSize=10;arcSize=20;" value="MLflow" vertex="1">
+          <mxGeometry height="26" width="90" x="830" y="572" as="geometry" />
+        </mxCell>
+        <mxCell id="apiBox" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;fontColor=#000000;align=left;verticalAlign=top;spacing=8;fontSize=11;arcSize=6;" value="&lt;b&gt;FastAPI&lt;/b&gt;  (api, :8000)  —  &lt;i&gt;src.api&lt;/i&gt;&lt;br&gt;&lt;br&gt;• POST /predict  (Redis-cached, SHA-256 key)&lt;br&gt;• /health · /model-info · /metrics&lt;br&gt;• /drift-summary?scenario=a|b|c&lt;br&gt;• /analytics/queries  (ColumnStore SQL)&lt;br&gt;• /eda-figures · /report-figures · /docs" vertex="1">
+          <mxGeometry height="150" width="460" x="950" y="585" as="geometry" />
+        </mxCell>
+        <mxCell id="bFastapi" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f0f0f0;strokeColor=#000000;dashed=1;fontColor=#000000;fontStyle=1;fontSize=10;arcSize=20;" value="FastAPI + Uvicorn" vertex="1">
+          <mxGeometry height="26" width="130" x="1280" y="572" as="geometry" />
+        </mxCell>
+        <mxCell id="eReactApi" edge="1" parent="1" source="reactBox" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;strokeColor=#000000;endArrow=block;fontSize=10;fontColor=#000000;" target="apiBox" value="REST  :8000  (VITE_API_URL)">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="eModelsApi" edge="1" parent="1" source="cyModels" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;strokeColor=#000000;dashed=1;endArrow=block;fontSize=10;fontColor=#000000;" target="apiBox" value="load model.joblib">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="eRedisApi" edge="1" parent="1" source="cyRedis" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;strokeColor=#000000;startArrow=block;endArrow=block;fontSize=10;fontColor=#000000;" target="apiBox" value="cache R/W">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="eCSApi" edge="1" parent="1" source="cyCS" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;strokeColor=#000000;endArrow=block;fontSize=10;fontColor=#000000;" target="apiBox" value="SQL queries">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="eMLflowStore" edge="1" parent="1" source="cyMLflow" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;strokeColor=#000000;startArrow=block;endArrow=block;fontSize=10;fontColor=#000000;" target="mlflowBox" value="read store">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="legend" parent="1" style="text;html=1;strokeColor=none;fillColor=none;fontColor=#000000;fontStyle=2;fontSize=10;align=left;verticalAlign=middle;" value="Grey dashed tags = technology / logo placeholders. In draw.io, type the tool name in the shape-search box (top-left) and drag the official logo onto each tag." vertex="1">
+          <mxGeometry height="22" width="1400" x="20" y="800" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

@@ -33,8 +33,18 @@ with DAG(
 
     ingest_data = BashOperator(
         task_id="ingest_data",
-        bash_command="PYTHONPATH={} python -m src.data_processing".format(
+        bash_command="PYTHONPATH={} python -m src.data_processing --stage ingest".format(
             PROJECT_ROOT
+        ),
+        cwd=PROJECT_ROOT,
+    )
+
+    preprocess_data = BashOperator(
+        task_id="preprocess_data",
+        bash_command=(
+            "PYTHONPATH={} python -m src.data_processing --stage preprocess".format(
+                PROJECT_ROOT
+            )
         ),
         cwd=PROJECT_ROOT,
     )
@@ -57,4 +67,19 @@ with DAG(
         cwd=PROJECT_ROOT,
     )
 
-    ingest_data >> train_model >> evaluate_model >> monitor_drift
+    generate_drift = BashOperator(
+        task_id="generate_drift_data",
+        bash_command="PYTHONPATH={} python -m src.generate_drift_data".format(
+            PROJECT_ROOT
+        ),
+        cwd=PROJECT_ROOT,
+    )
+
+    (
+        ingest_data
+        >> preprocess_data
+        >> train_model
+        >> evaluate_model
+        >> generate_drift
+        >> monitor_drift
+    )

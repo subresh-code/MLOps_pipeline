@@ -76,6 +76,38 @@ services:
       retries: 5
       start_period: 60s
 
+  # ── Apache Airflow (pipeline orchestration) ─────────────────────────────
+  airflow:
+    build:
+      context: .
+      dockerfile: Dockerfile.airflow
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./dags:/opt/airflow/dags
+      - ./src:/opt/airflow/src
+      - ./data:/opt/airflow/data
+      - ./models:/opt/airflow/models
+      - ./reports:/opt/airflow/reports
+      - ./mlflow_tracking:/opt/airflow/mlflow_tracking
+    environment:
+      - AIRFLOW_HOME=/opt/airflow
+      - AIRFLOW__CORE__DAGS_FOLDER=/opt/airflow/dags
+      - AIRFLOW__CORE__LOAD_EXAMPLES=False
+      - AIRFLOW__CORE__DAGS_ARE_PAUSED_AT_CREATION=False
+      - AIRFLOW__DATABASE__SQL_ALCHEMY_CONN=sqlite:////opt/airflow/airflow.db
+      - AIRFLOW__WEBSERVER__SECRET_KEY=mlops_pipeline_secret_key
+      - _AIRFLOW_DB_MIGRATE=true
+      - _AIRFLOW_WWW_USER_CREATE=true
+      - _AIRFLOW_WWW_USER_USERNAME=admin
+      - _AIRFLOW_WWW_USER_PASSWORD=admin
+      - _AIRFLOW_WWW_USER_FIRSTNAME=Admin
+      - _AIRFLOW_WWW_USER_LASTNAME=User
+      - _AIRFLOW_WWW_USER_EMAIL=admin@example.com
+      - _AIRFLOW_WWW_USER_ROLE=Admin
+      - MLFLOW_TRACKING_URI=sqlite:////opt/airflow/mlflow_tracking/mlflow.db
+    command: standalone
+
   # ── React frontend ───────────────────────────────────────────────────────
   frontend:
     build:

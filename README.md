@@ -44,6 +44,29 @@ The dataset contains 590,540 anonymised transactions with a **3.5% fraud rate** 
 
 ## Quick Start
 
+### Automated (recommended) — two commands
+
+After cloning, the entire pipeline runs hands-off in Docker via Airflow. You only
+need Docker and a Kaggle API token (the raw data is ~1.3 GB and not committed).
+
+```bash
+# 1. Provide a Kaggle token (https://www.kaggle.com/settings -> API -> Create New Token)
+export KAGGLE_API_TOKEN=KGAT_xxxxxxxxxxxxxxxx     # or save it to ~/.kaggle/access_token
+
+# 2. Download the raw dataset into data/raw/
+./download_data.sh
+
+# 3. Build Airflow, trigger the DAG, and run all stages end-to-end:
+#    ingest -> preprocess -> train -> evaluate -> generate_drift -> monitor
+./run_pipeline.sh
+```
+
+`run_pipeline.sh` options: `--no-wait` (trigger and return), `--full-stack` (also
+start the API, frontend, Redis, MariaDB, and MLflow). The Airflow UI is at
+http://localhost:8080 (admin/admin).
+
+### Manual (step by step)
+
 ### 1. Create and activate a virtual environment
 
 ```bash

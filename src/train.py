@@ -24,6 +24,7 @@ from src.config import (
     PREPROCESSING_ARTIFACTS_PATH,
     PROCESSED_TEST_FILE,
     PROCESSED_TRAIN_FILE,
+    PROJECT_ROOT,
     TARGET,
     TRAINING_METRICS_PATH,
 )
@@ -105,7 +106,15 @@ def save_artifacts(
 
 
 def run_training() -> tuple[XGBClassifier, dict]:
+    artifact_location = str(PROJECT_ROOT / "mlflow_tracking" / "artifacts")
     mlflow.set_tracking_uri(MLFLOW_TRACKING_URI)
+    client = mlflow.tracking.MlflowClient()
+    try:
+        exp = client.get_experiment_by_name(MLFLOW_EXPERIMENT_NAME)
+        if exp is None:
+            client.create_experiment(MLFLOW_EXPERIMENT_NAME, artifact_location=artifact_location)
+    except Exception:
+        pass
     mlflow.set_experiment(MLFLOW_EXPERIMENT_NAME)
 
     train_df, test_df = load_processed_data()
@@ -123,13 +132,11 @@ def run_training() -> tuple[XGBClassifier, dict]:
         model, metrics = train_model(X_train, y_train, X_test, y_test)
 
         mlflow.log_metrics(metrics)
-        mlflow.xgboost.log_model(model, "model")
 
         importance = pd.DataFrame(
             {"feature": feature_columns, "importance": model.feature_importances_}
         ).sort_values("importance", ascending=False)
         importance.to_csv(MODELS_DIR / "feature_importance.csv", index=False)
-        mlflow.log_artifact(str(MODELS_DIR / "feature_importance.csv"))
 
         logger.info(f"MLflow run ID: {mlflow.active_run().info.run_id}")
 

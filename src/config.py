@@ -8,6 +8,11 @@ MODELS_DIR = PROJECT_ROOT / "models"
 
 TRAIN_TRANSACTION_FILE = DATA_RAW_DIR / "train_transaction.csv"
 TRAIN_IDENTITY_FILE = DATA_RAW_DIR / "train_identity.csv"
+# Raw split — output of the ingestion stage, input to the preprocessing stage.
+RAW_SPLIT_TRAIN_FILE = DATA_PROCESSED_DIR / "raw_train.parquet"
+RAW_SPLIT_TEST_FILE = DATA_PROCESSED_DIR / "raw_test.parquet"
+
+# Processed — output of the preprocessing stage.
 PROCESSED_TRAIN_FILE = DATA_PROCESSED_DIR / "train.parquet"
 PROCESSED_TEST_FILE = DATA_PROCESSED_DIR / "test.parquet"
 REFERENCE_DATA_FILE = DATA_PROCESSED_DIR / "reference_data.parquet"
@@ -60,7 +65,10 @@ MODEL_PARAMS = {
     "n_jobs": -1,
 }
 
-MLFLOW_TRACKING_URI = "sqlite:///mlruns/mlflow.db"
+MLFLOW_TRACKING_URI = os.getenv(
+    "MLFLOW_TRACKING_URI",
+    "sqlite:///" + str(PROJECT_ROOT / "mlflow_tracking" / "mlflow.db"),
+)
 MLFLOW_EXPERIMENT_NAME = "fraud-detection"
 
 REPORTS_DIR = PROJECT_ROOT / "reports"

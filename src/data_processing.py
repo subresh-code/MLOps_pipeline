@@ -1,8 +1,8 @@
+import argparse
 import json
 import logging
 
 import pandas as pd
-from sklearn.model_selection import train_test_split
 
 from src.config import (
     DATA_PROCESSED_DIR,
@@ -11,6 +11,8 @@ from src.config import (
     PROCESSED_TEST_FILE,
     PROCESSED_TRAIN_FILE,
     RANDOM_STATE,
+    RAW_SPLIT_TEST_FILE,
+    RAW_SPLIT_TRAIN_FILE,
     REFERENCE_DATA_FILE,
     REFERENCE_SAMPLE_SIZE,
     REPORTS_METRICS_DIR,
@@ -106,35 +108,37 @@ def load_raw_data() -> pd.DataFrame:
     return df, summary
 
 
-def process_data() -> tuple[pd.DataFrame, pd.DataFrame, FeaturePreprocessor]:
+def ingest_data() -> tuple[pd.DataFrame, pd.DataFrame]:
     """
-    Process raw data and return train/test splits with fitted preprocessor.
+    Ingestion stage: load, merge, and temporally split the raw data.
 
-    The preprocessor is fitted on the training split only (after splitting)
-    to avoid data leakage. The test set is then transformed using the
-    fitted preprocessor.
+    Writes the un-preprocessed train/test splits to disk so the preprocessing
+    stage can run independently. No feature engineering happens here.
 
     Returns:
-        train_df: Processed training data
-        test_df: Processed test data
-        preprocessor: Fitted FeaturePreprocessor for use in inference
+        train_raw: Raw training split (earlier 80%)
+        test_raw: Raw test split (later 20%)
     """
     df, ingestion_summary = load_raw_data()
 
-    # Split BEFORE preprocessing to avoid data leakage
-    train_raw, test_raw = train_test_split(
-        df, test_size=TEST_SIZE, random_state=RANDOM_STATE, stratify=df[TARGET]
+    # Temporal split: sort by TransactionDT so train = earlier 80%, test = later 20%.
+    # This avoids look-ahead bias — random splitting on time-ordered fraud data
+    # leaks future patterns into training and produces over-optimistic metrics.
+    df_sorted = df.sort_values("TransactionDT").reset_index(drop=True)
+    split_idx = int(len(df_sorted) * (1 - TEST_SIZE))
+    train_raw = df_sorted.iloc[:split_idx].copy()
+    test_raw = df_sorted.iloc[split_idx:].copy()
+    logger.info(
+        f"Temporal split — Train: {len(train_raw)} (earlier {int((1-TEST_SIZE)*100)}%), "
+        f"Test: {len(test_raw)} (later {int(TEST_SIZE*100)}%)"
     )
-    logger.info(f"Split data - Train: {len(train_raw)}, Test: {len(test_raw)}")
 
     # Add split info to summary
-    fraud_rate_train = float(train_raw[TARGET].mean())
-    fraud_rate_test = float(test_raw[TARGET].mean())
     ingestion_summary.update({
         "train_rows": len(train_raw),
         "test_rows": len(test_raw),
-        "fraud_rate_train": round(fraud_rate_train, 4),
-        "fraud_rate_test": round(fraud_rate_test, 4),
+        "fraud_rate_train": round(float(train_raw[TARGET].mean()), 4),
+        "fraud_rate_test": round(float(test_raw[TARGET].mean()), 4),
     })
 
     # Save ingestion summary
@@ -143,11 +147,43 @@ def process_data() -> tuple[pd.DataFrame, pd.DataFrame, FeaturePreprocessor]:
         json.dump(ingestion_summary, f, indent=2)
     logger.info(f"Ingestion summary saved to {INGESTION_SUMMARY_PATH}")
 
-    # Fit preprocessor on training data only
+    # Persist the raw splits as the handoff to the preprocessing stage
+    DATA_PROCESSED_DIR.mkdir(parents=True, exist_ok=True)
+    train_raw.to_parquet(RAW_SPLIT_TRAIN_FILE, index=False)
+    test_raw.to_parquet(RAW_SPLIT_TEST_FILE, index=False)
+    logger.info(
+        f"Raw splits saved to {RAW_SPLIT_TRAIN_FILE} and {RAW_SPLIT_TEST_FILE}"
+    )
+
+    return train_raw, test_raw
+
+
+def preprocess_data() -> tuple[pd.DataFrame, pd.DataFrame, FeaturePreprocessor]:
+    """
+    Preprocessing stage: feature engineering, encoding, and imputation.
+
+    Reads the raw splits produced by ingest_data(), fits the preprocessor on
+    the training split only (to avoid leakage), transforms both splits, and
+    saves the processed data, drift-reference sample, and fitted preprocessor.
+
+    Returns:
+        train_df: Processed training data
+        test_df: Processed test data
+        preprocessor: Fitted FeaturePreprocessor for use in inference
+    """
+    if not RAW_SPLIT_TRAIN_FILE.exists() or not RAW_SPLIT_TEST_FILE.exists():
+        logger.info("Raw splits not found — running ingestion stage first.")
+        ingest_data()
+
+    train_raw = pd.read_parquet(RAW_SPLIT_TRAIN_FILE)
+    test_raw = pd.read_parquet(RAW_SPLIT_TEST_FILE)
+    logger.info(
+        f"Loaded raw splits — Train: {train_raw.shape}, Test: {test_raw.shape}"
+    )
+
+    # Fit preprocessor on training data only, then transform both splits
     preprocessor = FeaturePreprocessor()
     train_df = preprocessor.fit_transform(train_raw)
-
-    # Transform test data using fitted preprocessor
     test_df = preprocessor.transform(test_raw)
 
     logger.info(f"Train shape: {train_df.shape}, Test shape: {test_df.shape}")
@@ -175,6 +211,30 @@ def process_data() -> tuple[pd.DataFrame, pd.DataFrame, FeaturePreprocessor]:
     return train_df, test_df, preprocessor
 
 
+def process_data() -> tuple[pd.DataFrame, pd.DataFrame, FeaturePreprocessor]:
+    """Run both stages end-to-end (ingestion then preprocessing).
+
+    Kept for backward compatibility — callers that want the full pipeline in a
+    single call (e.g. training when artifacts are missing) still work.
+    """
+    ingest_data()
+    return preprocess_data()
+
+
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO)
-    train_df, test_df, preprocessor = process_data()
+    parser = argparse.ArgumentParser(description="Data ingestion and preprocessing.")
+    parser.add_argument(
+        "--stage",
+        choices=["ingest", "preprocess", "all"],
+        default="all",
+        help="Which stage to run (default: all).",
+    )
+    args = parser.parse_args()
+
+    if args.stage == "ingest":
+        ingest_data()
+    elif args.stage == "preprocess":
+        preprocess_data()
+    else:
+        process_data()
