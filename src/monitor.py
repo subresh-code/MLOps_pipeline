@@ -151,6 +151,9 @@ def run_drift_monitor(current_data_path: str | None = None, output_json_path: st
     except Exception as e:
         logger.warning(f"Evidently drift detection failed: {e}")
         logger.warning("Falling back to statistical comparison")
+        evidently_error = str(e)
+    else:
+        evidently_error = None
 
     if not evidently_ok:
         drift_result = _fallback_drift(ref_aligned, cur_aligned)
@@ -158,14 +161,14 @@ def run_drift_monitor(current_data_path: str | None = None, output_json_path: st
             "threshold_used": DRIFT_THRESHOLD,
             "reference_rows": len(ref_aligned),
             "current_rows": len(cur_aligned),
-            "evidently_error": str(e),
+            "evidently_error": evidently_error,
         })
         # Write a minimal HTML placeholder
         DRIFT_REPORT_HTML.parent.mkdir(parents=True, exist_ok=True)
         with open(DRIFT_REPORT_HTML, "w") as f:
             f.write(
                 f"<html><body><h1>Drift Report</h1>"
-                f"<p>Evidently HTML generation failed: {e}</p>"
+                f"<p>Evidently HTML generation failed: {evidently_error}</p>"
                 f"<p>Fallback statistical comparison used. See drift_summary.json.</p>"
                 f"</body></html>"
             )

@@ -1,0 +1,134 @@
+{
+  "method": "fallback_statistical",
+  "number_of_features": 118,
+  "number_of_drifted_features": 20,
+  "drift_share": 0.1695,
+  "drift_detected": true,
+  "drifted_features": [
+    {
+      "feature": "C8",
+      "ref_mean": 4.363,
+      "cur_mean": 185.2413,
+      "change_std": 2.1734
+    },
+    {
+      "feature": "dist2",
+      "ref_mean": 49.8398,
+      "cur_mean": 292.4687,
+      "change_std": 1.7924
+    },
+    {
+      "feature": "addr2",
+      "ref_mean": 86.8404,
+      "cur_mean": 91.0328,
+      "change_std": 1.8282
+    },
+    {
+      "feature": "C6",
+      "ref_mean": 8.5406,
+      "cur_mean": 144.6056,
+      "change_std": 2.1297
+    },
+    {
+      "feature": "C7",
+      "ref_mean": 2.403,
+      "cur_mean": 118.9095,
+      "change_std": 2.179
+    },
+    {
+      "feature": "C4",
+      "ref_mean": 3.4918,
+      "cur_mean": 133.9312,
+      "change_std": 2.1365
+    },
+    {
+      "feature": "card2",
+      "ref_mean": 363.5344,
+      "cur_mean": 678.8462,
+      "change_std": 1.9805
+    },
+    {
+      "feature": "card3",
+      "ref_mean": 153.3854,
+      "cur_mean": 176.2336,
+      "change_std": 2.0496
+    },
+    {
+      "feature": "card5",
+      "ref_mean": 199.4688,
+      "cur_mean": 281.4566,
+      "change_std": 1.9927
+    },
+    {
+      "feature": "TransactionAmt",
+      "ref_mean": 141.7026,
+      "cur_mean": 1399.7226,
+      "change_std": 2.4762
+    },
+    {
+      "feature": "C11",
+      "ref_mean": 9.472,
+      "cur_mean": 187.8068,
+      "change_std": 2.1486
+    },
+    {
+      "feature": "C3",
+      "ref_mean": 0.0044,
+      "cur_mean": 0.148,
+      "change_std": 1.744
+    },
+    {
+      "feature": "C9",
+      "ref_mean": 4.5342,
+      "cur_mean": 38.2743,
+      "change_std": 2.0942
+    },
+    {
+      "feature": "C5",
+      "ref_mean": 5.9118,
+      "cur_mean": 59.5132,
+      "change_std": 1.9998
+    },
+    {
+      "feature": "C10",
+      "ref_mean": 4.4878,
+      "cur_mean": 188.3185,
+      "change_std": 2.1763
+    },
+    {
+      "feature": "C2",
+      "ref_mean": 13.9714,
+      "cur_mean": 305.0488,
+      "change_std": 2.1486
+    },
+    {
+      "feature": "dist1",
+      "ref_mean": 46.4914,
+      "cur_mean": 518.6883,
+      "change_std": 2.1138
+    },
+    {
+      "feature": "card1",
+      "ref_mean": 9886.63,
+      "cur_mean": 19885.845,
+      "change_std": 2.0245
+    },
+    {
+      "feature": "C1",
+      "ref_mean": 13.056,
+      "cur_mean": 261.7233,
+      "change_std": 2.1432
+    },
+    {
+      "feature": "addr1",
+      "ref_mean": 291.679,
+      "cur_mean": 480.8779,
+      "change_std": 1.9783
+    }
+  ],
+  "evidently_available": false,
+  "threshold_used": 0.05,
+  "reference_rows": 5000,
+  "current_rows": 10000,
+  "evidently_error": "No module named 'evidently'"
+}

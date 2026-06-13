@@ -1,0 +1,13 @@
+{
+  "method": "fallback_statistical",
+  "number_of_features": 118,
+  "number_of_drifted_features": 0,
+  "drift_share": 0.0,
+  "drift_detected": false,
+  "drifted_features": [],
+  "evidently_available": false,
+  "threshold_used": 0.05,
+  "reference_rows": 5000,
+  "current_rows": 10000,
+  "evidently_error": "No module named 'evidently'"
+}
