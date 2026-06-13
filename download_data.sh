@@ -39,41 +39,34 @@ fi
 
 echo "Downloading IEEE-CIS Fraud Detection dataset (~1.3 GB) into data/raw/ ..."
 
-KAGGLE_TOKEN="$TOKEN" RAW_DIR="$RAW_DIR" python3 <<'PY'
-import io
-import os
-import sys
-import zipfile
+BASE="https://www.kaggle.com/api/v1/competitions/data/download/ieee-fraud-detection"
+FILES=(
+  sample_submission.csv
+  test_identity.csv
+  test_transaction.csv
+  train_identity.csv
+  train_transaction.csv
+)
 
-import requests
-
-token = os.environ["KAGGLE_TOKEN"]
-out_dir = os.environ["RAW_DIR"]
-headers = {"Authorization": f"Bearer {token}"}
-base = "https://www.kaggle.com/api/v1/competitions/data/download/ieee-fraud-detection"
-
-files = [
-    "sample_submission.csv",
-    "test_identity.csv",
-    "test_transaction.csv",
-    "train_identity.csv",
-    "train_transaction.csv",
-]
-
-for fname in files:
-    print(f"  -> {fname}", flush=True)
-    r = requests.get(f"{base}/{fname}", headers=headers, stream=True, allow_redirects=True)
-    if r.status_code != 200:
-        sys.exit(f"Download failed for {fname}: HTTP {r.status_code}. Check your token.")
-    content = b"".join(r.iter_content(chunk_size=1024 * 1024))
-    if r.headers.get("Content-Type") == "application/zip":
-        with zipfile.ZipFile(io.BytesIO(content)) as z:
-            z.extractall(out_dir)
-    else:
-        with open(os.path.join(out_dir, fname), "wb") as f:
-            f.write(content)
-
-print("Done.")
-PY
+# Use curl (near-universal) for the download and Python's stdlib for unzip, so
+# this script has no third-party dependencies on a fresh machine.
+for fname in "${FILES[@]}"; do
+  echo "  -> $fname"
+  tmp="$RAW_DIR/$fname.download"
+  http_code=$(curl -sSL -w "%{http_code}" -o "$tmp" \
+    -H "Authorization: Bearer $TOKEN" "$BASE/$fname")
+  if [ "$http_code" != "200" ]; then
+    rm -f "$tmp"
+    echo "ERROR: download failed for $fname (HTTP $http_code). Check your token." >&2
+    exit 1
+  fi
+  # Kaggle serves each file as a zip; extract if so, otherwise keep as-is.
+  if python3 -c "import zipfile,sys; sys.exit(0 if zipfile.is_zipfile('$tmp') else 1)"; then
+    python3 -c "import zipfile; zipfile.ZipFile('$tmp').extractall('$RAW_DIR')"
+    rm -f "$tmp"
+  else
+    mv "$tmp" "$RAW_DIR/$fname"
+  fi
+done
 
 echo "Raw data ready in data/raw/"
